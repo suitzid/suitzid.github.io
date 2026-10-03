@@ -52,6 +52,19 @@ nav button.on{color:var(--ac)}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+
+/* ── главная ── */
+.hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 16px;text-align:center}
+.ava.big{width:84px;height:84px;font-size:36px}
+.hero-name{font-size:20px;font-weight:700}
+.stat{padding:14px 16px}
+.stat-val{font-size:22px;font-weight:700;margin-top:6px;word-break:break-word}
+.stat-val.sm{font-size:15px;font-weight:600;color:var(--mu)}
+.num-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:10px 12px;margin-top:6px;border-radius:10px;background:var(--bg);cursor:pointer}
+.num-row:active{opacity:.7}
+.num-row .mu{font-size:12px}
+.empty{color:var(--mu);font-size:14px;margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -69,7 +82,7 @@ const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-let S = { user:{}, prices:{}, cur:'₽', number:null };
+let S = { user:{}, profile:null, prices:{}, cur:'₽', number:null };
 let tab = 'home', mk = 'coin', region = '+7', timer = null, locked = null;
 
 async function api(path, opts = {}) {
@@ -86,6 +99,15 @@ function copy(t) {
 function fallback(t, done) { const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); done(); } catch (e) {} a.remove(); }
 const price = k => (S.prices[k] ?? '—') + ' ' + S.cur;
 
+function prem(plan, until) {
+  if (!plan) return 'нет';
+  if (!until) return String(plan);
+  const d = new Date(until);
+  if (isNaN(d)) return String(plan);
+  const days = Math.ceil((d - Date.now()) / 86400000);
+  return days < 0 ? plan + ' · истёк' : plan + ' · ' + days + ' дн.';
+}
+
 /* ---------- экраны ---------- */
 function render() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -93,8 +115,53 @@ function render() {
   const v = $('#view');
   if (locked) { v.innerHTML = `<div class="card"><h2>Подпишитесь на канал</h2><p class="mu">Без подписки мини-приложение недоступно.</p><button class="btn" onclick="tg.openTelegramLink(locked)">Подписаться</button><div style="height:8px"></div><button class="btn alt" onclick="boot()">Я подписался</button></div>`; return; }
   if (tab === 'home') {
-    const u = S.user, name = u.username ? '@' + u.username : (u.first_name || 'Без юзернейма');
-    v.innerHTML = `<div class="card row"><div class="ava">${esc((u.username || u.first_name || '?')[0].toUpperCase())}</div><div><div class="mu">Ваш юзернейм в Telegram</div><h2 style="margin:2px 0 0">${esc(name)}</h2></div></div>`;
+    const u = S.user, p = S.profile;
+    const uname = u.username ? '@' + u.username : (u.first_name || 'Гость');
+    const initial = (u.username || u.first_name || '?')[0].toUpperCase();
+
+    if (!p) {
+      v.innerHTML = `
+        <div class="card hero">
+          <div class="ava big">${esc(initial)}</div>
+          <div class="hero-name">${esc(uname)}</div>
+          <div class="mu">Профиль Orenix ещё не создан</div>
+        </div>
+        <div class="card">
+          <h2 style="margin-top:0">Начните с номера</h2>
+          <p class="mu">Перейдите в «Маркет» → «Номер», чтобы получить первый номер для регистрации в Orenix.</p>
+          <button class="btn" onclick="tab='market';mk='number';render()">Получить номер</button>
+        </div>`;
+      return;
+    }
+
+    const premTxt = prem(p.premium_plan, p.premium_until);
+    const premCls = p.premium_plan ? '' : 'sm';
+
+    v.innerHTML = `
+      <div class="card hero">
+        <div class="ava big">${esc(initial)}</div>
+        <div class="hero-name">${esc(p.name || uname)}</div>
+        ${u.username ? `<div class="mu">@${esc(u.username)}</div>` : ''}
+      </div>
+
+      <div class="grid2">
+        <div class="card stat"><div class="mu">🐾 Cat Coin</div><div class="stat-val">${esc(p.cat_coin)}</div></div>
+        <div class="card stat"><div class="mu">⭐ Premium</div><div class="stat-val ${premCls}">${esc(premTxt)}</div></div>
+      </div>
+
+      <div class="card">
+        <div class="mu">📱 Номера</div>
+        ${p.numbers.length
+          ? p.numbers.map(n => `<div class="num-row" onclick="copy('${esc(n)}')"><span>${esc(n)}</span><span class="mu">копировать</span></div>`).join('')
+          : '<p class="empty">Пока нет номеров</p>'}
+      </div>
+
+      <div class="card">
+        <div class="mu">🆔 Юзернеймы</div>
+        ${p.usernames.length
+          ? p.usernames.map(x => `<div class="num-row" onclick="copy('@${esc(x)}')"><span>@${esc(x)}</span><span class="mu">копировать</span></div>`).join('')
+          : '<p class="empty">Пока нет юзернеймов</p>'}
+      </div>`;
   } else if (tab === 'support') {
     v.innerHTML = `<h2>Поддержка</h2><div class="card soon">Скоро</div>`;
   } else {
