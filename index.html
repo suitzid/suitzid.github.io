@@ -41,7 +41,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .seg button{padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--ln);font-weight:600}
 .seg button.on{border-color:var(--ac);color:var(--ac)}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0px);z-index:4}
 nav button{flex:1;padding:10px 0 9px;background:none;color:var(--mu);font-size:12px}
 nav button b{display:block;font-size:20px;font-weight:400}
 nav button.on{color:var(--ac)}
@@ -54,17 +54,58 @@ nav button.on{color:var(--ac)}
 button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 
 /* ── главная ── */
-.hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 16px;text-align:center}
-.ava.big{width:84px;height:84px;font-size:36px}
-.hero-name{font-size:20px;font-weight:700}
-.stat{padding:14px 16px}
-.stat-val{font-size:22px;font-weight:700;margin-top:6px;word-break:break-word}
-.stat-val.sm{font-size:15px;font-weight:600;color:var(--mu)}
-.num-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
-  padding:10px 12px;margin-top:6px;border-radius:10px;background:var(--bg);cursor:pointer}
-.num-row:active{opacity:.7}
-.num-row .mu{font-size:12px}
-.empty{color:var(--mu);font-size:14px;margin:8px 0 0}
+.hero{
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#e9a93b 0%,#d98a1f 60%,#b96f10 100%);
+  color:#1b1405;border-radius:20px;padding:22px 18px;margin-bottom:14px;
+}
+.hero::after{
+  content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;
+  border-radius:50%;background:rgba(255,255,255,.18);
+}
+.hero::before{
+  content:"";position:absolute;right:20px;bottom:-60px;width:120px;height:120px;
+  border-radius:50%;background:rgba(255,255,255,.12);
+}
+.hero-top{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+.hero .ava{
+  width:60px;height:60px;font-size:24px;background:rgba(0,0,0,.15);color:#1b1405;
+  border:2px solid rgba(255,255,255,.35);
+}
+.hero-greet{font-size:13px;opacity:.75;font-weight:500}
+.hero-name{font-size:20px;font-weight:800;letter-spacing:-.01em;margin-top:2px}
+.hero-tag{
+  display:inline-block;margin-top:12px;padding:5px 12px;border-radius:999px;
+  background:rgba(0,0,0,.15);font-size:12px;font-weight:600;position:relative;z-index:1;
+}
+
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.qa button{
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  padding:16px;border-radius:16px;background:var(--card);
+  font-weight:600;text-align:left;transition:transform .12s;
+}
+.qa button:active{transform:scale(.97)}
+.qa .ico{font-size:22px}
+.qa .lbl{font-size:14px}
+.qa .sub{font-size:12px;color:var(--mu);font-weight:400;margin-top:-4px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:16px;padding:14px}
+.stat .k{font-size:12px;color:var(--mu);font-weight:500}
+.stat .v{font-size:22px;font-weight:800;margin-top:6px;letter-spacing:-.01em}
+.stat .v.sm{font-size:14px;font-weight:600;color:var(--mu);letter-spacing:0}
+
+.list-row{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:11px 13px;margin-top:6px;border-radius:11px;background:var(--bg);
+  cursor:pointer;font-size:15px;font-weight:500;
+}
+.list-row:active{opacity:.65}
+.list-row .cp{font-size:12px;color:var(--mu);font-weight:400}
+.list-empty{color:var(--mu);font-size:14px;margin:8px 0 0}
+
+.section-h{font-size:13px;color:var(--mu);font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.04em}
 </style>
 </head>
 <body>
@@ -105,7 +146,7 @@ function prem(plan, until) {
   const d = new Date(until);
   if (isNaN(d)) return String(plan);
   const days = Math.ceil((d - Date.now()) / 86400000);
-  return days < 0 ? plan + ' · истёк' : plan + ' · ' + days + ' дн.';
+  return days < 0 ? 'истёк' : days + ' дн.';
 }
 
 /* ---------- экраны ---------- */
@@ -113,55 +154,14 @@ function render() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   clearInterval(timer);
   const v = $('#view');
-  if (locked) { v.innerHTML = `<div class="card"><h2>Подпишитесь на канал</h2><p class="mu">Без подписки мини-приложение недоступно.</p><button class="btn" onclick="tg.openTelegramLink(locked)">Подписаться</button><div style="height:8px"></div><button class="btn alt" onclick="boot()">Я подписался</button></div>`; return; }
+
+  if (locked) {
+    v.innerHTML = `<div class="card"><h2>Подпишитесь на канал</h2><p class="mu">Без подписки мини-приложение недоступно.</p><button class="btn" onclick="tg.openTelegramLink(locked)">Подписаться</button><div style="height:8px"></div><button class="btn alt" onclick="boot()">Я подписался</button></div>`;
+    return;
+  }
+
   if (tab === 'home') {
-    const u = S.user, p = S.profile;
-    const uname = u.username ? '@' + u.username : (u.first_name || 'Гость');
-    const initial = (u.username || u.first_name || '?')[0].toUpperCase();
-
-    if (!p) {
-      v.innerHTML = `
-        <div class="card hero">
-          <div class="ava big">${esc(initial)}</div>
-          <div class="hero-name">${esc(uname)}</div>
-          <div class="mu">Профиль Orenix ещё не создан</div>
-        </div>
-        <div class="card">
-          <h2 style="margin-top:0">Начните с номера</h2>
-          <p class="mu">Перейдите в «Маркет» → «Номер», чтобы получить первый номер для регистрации в Orenix.</p>
-          <button class="btn" onclick="tab='market';mk='number';render()">Получить номер</button>
-        </div>`;
-      return;
-    }
-
-    const premTxt = prem(p.premium_plan, p.premium_until);
-    const premCls = p.premium_plan ? '' : 'sm';
-
-    v.innerHTML = `
-      <div class="card hero">
-        <div class="ava big">${esc(initial)}</div>
-        <div class="hero-name">${esc(p.name || uname)}</div>
-        ${u.username ? `<div class="mu">@${esc(u.username)}</div>` : ''}
-      </div>
-
-      <div class="grid2">
-        <div class="card stat"><div class="mu">🐾 Cat Coin</div><div class="stat-val">${esc(p.cat_coin)}</div></div>
-        <div class="card stat"><div class="mu">⭐ Premium</div><div class="stat-val ${premCls}">${esc(premTxt)}</div></div>
-      </div>
-
-      <div class="card">
-        <div class="mu">📱 Номера</div>
-        ${p.numbers.length
-          ? p.numbers.map(n => `<div class="num-row" onclick="copy('${esc(n)}')"><span>${esc(n)}</span><span class="mu">копировать</span></div>`).join('')
-          : '<p class="empty">Пока нет номеров</p>'}
-      </div>
-
-      <div class="card">
-        <div class="mu">🆔 Юзернеймы</div>
-        ${p.usernames.length
-          ? p.usernames.map(x => `<div class="num-row" onclick="copy('@${esc(x)}')"><span>@${esc(x)}</span><span class="mu">копировать</span></div>`).join('')
-          : '<p class="empty">Пока нет юзернеймов</p>'}
-      </div>`;
+    homeScreen(v);
   } else if (tab === 'support') {
     v.innerHTML = `<h2>Поддержка</h2><div class="card soon">Скоро</div>`;
   } else {
@@ -170,6 +170,106 @@ function render() {
     pane();
   }
 }
+
+/* ---------- главная ---------- */
+function homeScreen(v) {
+  const u = S.user, p = S.profile;
+  const uname = u.first_name || u.username || 'друг';
+  const initial = String(uname)[0].toUpperCase();
+  const hasProfile = p && ((p.numbers && p.numbers.length) || p.cat_coin || p.premium_plan);
+
+  const hero = `
+    <div class="hero">
+      <div class="hero-top">
+        <div class="ava">${esc(initial)}</div>
+        <div>
+          <div class="hero-greet">Добро пожаловать</div>
+          <div class="hero-name">${esc((p && p.name) || uname)}</div>
+        </div>
+      </div>
+      ${u.username ? `<div class="hero-tag">@${esc(u.username)}</div>` : ''}
+    </div>`;
+
+  if (!hasProfile) {
+    v.innerHTML = hero + `
+      <div class="qa">
+        <button onclick="tab='market';mk='number';render()">
+          <span class="ico">📱</span>
+          <span class="lbl">Получить номер</span>
+          <span class="sub">для регистрации</span>
+        </button>
+        <button onclick="tab='market';mk='coin';render()">
+          <span class="ico">🐾</span>
+          <span class="lbl">Cat Coin</span>
+          <span class="sub">скоро в продаже</span>
+        </button>
+        <button onclick="tab='market';mk='premium';render()">
+          <span class="ico">⭐</span>
+          <span class="lbl">Premium</span>
+          <span class="sub">подписка Orenix</span>
+        </button>
+        <button onclick="tab='support';render()">
+          <span class="ico">💬</span>
+          <span class="lbl">Поддержка</span>
+          <span class="sub">мы на связи</span>
+        </button>
+      </div>
+      <div class="card">
+        <div class="section-h">С чего начать</div>
+        <p class="mu" style="margin-top:8px">
+          Перейдите в «Маркет» → «Номер», выберите регион и получите свой первый номер Orenix.
+        </p>
+      </div>`;
+    return;
+  }
+
+  const nums = p.numbers || [];
+  const uns = p.usernames || [];
+
+  v.innerHTML = hero + `
+    <div class="stats">
+      <div class="stat">
+        <div class="k">🐾 Cat Coin</div>
+        <div class="v">${esc(p.cat_coin ?? 0)}</div>
+      </div>
+      <div class="stat">
+        <div class="k">⭐ Premium</div>
+        <div class="v ${p.premium_plan ? '' : 'sm'}">${esc(prem(p.premium_plan, p.premium_until))}</div>
+      </div>
+    </div>
+
+    <div class="qa">
+      <button onclick="tab='market';mk='number';render()">
+        <span class="ico">📱</span>
+        <span class="lbl">Номер</span>
+        <span class="sub">${nums.length ? nums.length + ' шт.' : 'получить'}</span>
+      </button>
+      <button onclick="tab='market';mk='coin';render()">
+        <span class="ico">🐾</span>
+        <span class="lbl">Маркет</span>
+        <span class="sub">Cat Coin · Premium</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="section-h">📱 Номера</div>
+      ${nums.length
+        ? nums.map(n => `<div class="list-row" onclick="copy('${esc(n)}')"><span>${esc(n)}</span><span class="cp">копировать</span></div>`).join('')
+        : '<p class="list-empty">Пока нет номеров</p>'}
+    </div>
+
+    <div class="card">
+      <div class="section-h">🆔 Юзернеймы</div>
+      ${uns.length
+        ? uns.map(x => {
+            const u2 = String(x).replace(/^@/,'');
+            return `<div class="list-row" onclick="copy('@${esc(u2)}')"><span>@${esc(u2)}</span><span class="cp">копировать</span></div>`;
+          }).join('')
+        : '<p class="list-empty">Пока нет юзернеймов</p>'}
+    </div>`;
+}
+
+/* ---------- маркет ---------- */
 function pane() {
   const p = $('#pane');
   if (mk === 'coin') {
@@ -201,7 +301,10 @@ function numberPane() {
 async function poll() {
   try {
     const n = (await api('/api/number')).number;
-    if (n && S.number && (n.entered !== S.number.entered || n.code !== S.number.code)) { S.number = n; if (tab === 'market' && mk === 'number') numberPane(); }
+    if (n && S.number && (n.entered !== S.number.entered || n.code !== S.number.code)) {
+      S.number = n;
+      if (tab === 'market' && mk === 'number') numberPane();
+    }
   } catch (e) {}
 }
 async function getCode() {
@@ -224,16 +327,20 @@ function closePay() { $('#sheet').hidden = true; }
 async function pay() {
   // ← ОПЛАТА: сейчас номер выдаётся сразу. Когда появится оплата, здесь сначала проведите платёж
   //   (например, Telegram Stars: openInvoice), и только после успеха вызывайте /api/number/random.
-  //   На сервере то же место помечено «ОПЛАТА» в bot.py (функция fulfil_number).
   const b = $('#paybtn'); b.disabled = true;
-  try { S.number = (await api('/api/number/random', { method: 'POST', body: JSON.stringify({ region }) })).number; closePay(); render(); }
-  catch (e) { toast(e.message); b.disabled = false; }
+  try {
+    S.number = (await api('/api/number/random', { method: 'POST', body: JSON.stringify({ region }) })).number;
+    closePay(); render();
+  } catch (e) { toast(e.message); b.disabled = false; }
 }
 
 /* ---------- запуск ---------- */
 async function boot() {
   try { S = { ...S, ...(await api('/api/state')) }; locked = null; }
-  catch (e) { if (e.error === 'not_subscribed') locked = e.channel_url; else { $('#view').innerHTML = `<div class="card soon">${esc(e.message)}<br>Откройте мини-приложение через бота.</div>`; return; } }
+  catch (e) {
+    if (e.error === 'not_subscribed') locked = e.channel_url;
+    else { $('#view').innerHTML = `<div class="card soon">${esc(e.message)}<br>Откройте мини-приложение через бота.</div>`; return; }
+  }
   render();
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
