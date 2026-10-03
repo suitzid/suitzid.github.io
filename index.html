@@ -83,7 +83,7 @@ async function api(path, body) {
     headers: { 'Authorization': 'tma ' + tg.initData, 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(j.message || 'Ошибка'), j);
+  if (!r.ok) throw Object.assign(new Error(j.message || 'Ошибка ' + r.status + ': ответ пришёл не от бота. Проверьте WEBAPP_URL и порт'), j);
   return j;
 }
 function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('show'); setTimeout(() => e.classList.remove('show'), 1800); }
